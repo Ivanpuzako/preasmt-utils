@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "preasmt-utils"
+version = "0.1.0"
+description = "utils for data preprocessing and visualization"
+authors = ["Ivan Puzako"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^1.4.4"
+numpy = "^1.23.2"
+jupyterlab = "^3.4.5"
+matplotlib = "^3.5.3"
+seaborn = "^0.11.2"
+scikit-learn = "^1.1.2"
+pandas-profiling = "^3.2.0"
+ipywidgets = "^8.0.2"
+imbalanced-learn = "^0.9.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
