@@ -4,9 +4,10 @@ import seaborn as sns
 from typing import List, Dict
 from collections import defaultdict
 from copy import deepcopy
+from sklearn.model_selection import train_test_split
 
 class Features:
-    def __init__(self, features: Dict[List[str]]):
+    def __init__(self, features: Dict[str, List[str]]):
         self.features = defaultdict(list, **features)
         
     def drop(self, to_drop: List[str]):
@@ -31,10 +32,13 @@ class Features:
     
     def __repr__(self):
         return str(self.features)
-        
-        
     
+    def __getitem__(self, key):
+        return self.features[key]
 
+
+        
+        
 class DataProcessor:
     def __init__(self, df: pd.DataFrame, target: str):
         self.df, self.target = df.drop([target], axis=1), df[target]
@@ -70,18 +74,24 @@ class DataProcessor:
                     print(f"NAN column '{col}' with {round(nan_ratio*100,2)}% misses")
         return nan_features
     
-    def numeric_corr(self):
+    def show_target_dist(self):
+        pass
+    
+    def train_test_split(self):
         pass
 
-            
+class ClfProcessor(DataProcessor):
+    def show_target_dist(self):
+        pass
     
-    
-        
-    
+    def train_test_split(self, test_size=0.2):
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.df, self.target, stratify=self.target, test_size=test_size, random_state=2022)
+        print('stratified split with test size {test_size}')
+        print('train target dist')
+        print(self.y_train.value_counts())
+        print('test target dist')
+        print(self.y_test.value_counts())
 
-def ClfProcessor(DataProcessor):
-    pass
-
-def RegProcessor(DataProcessor):
+class RegProcessor(DataProcessor):
     pass
         
