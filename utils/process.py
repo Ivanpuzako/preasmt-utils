@@ -1,10 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Dict
+from typing import List, Dict, Tuple, Callable
 from collections import defaultdict
+from sklearn.model_selection._split import BaseCrossValidator
 from copy import deepcopy
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 
 class Features:
@@ -74,6 +75,36 @@ class DataProcessor:
                 if verbose:
                     print(f"NAN column '{col}' with {round(nan_ratio*100,2)}% misses")
         return nan_features
+
+    def cross_validate(
+        self,
+        estimator,
+        metrics: List[Tuple[str, Callable]],
+        cv: BaseCrossValidator = StratifiedKFold(n_splits=3),
+    ):
+        folds = [fold for fold in cv.split(self.x_train, self.y_train)]
+        result = pd.DataFrame()
+        for fold_n, (train_idx, test_idx) in enumerate(folds):
+            x_train, y_train = (
+                self.x_train.iloc[train_idx],
+                self.y_train.iloc[train_idx],
+            )
+            x_test, y_test = self.x_train.iloc[test_idx], self.y_train.iloc[test_idx]
+            estimator.fit(x_train, y_train)
+            pred_train = estimator.predict(x_train)
+            pred_test = estimator.predict(x_test)
+            fold_result = {"fold_#": fold_n}
+            for metric_name, metric in metrics:
+                fold_result["train_" + metric_name] = metric(y_train, pred_train)
+                fold_result["test_" + metric_name] = metric(y_test, pred_test)
+            result = result.append(fold_result, ignore_index=True)
+        train_cols = [c for c in result.columns if c.startswith("train")]
+        test_cols = [c for c in result.columns if c.startswith("test")]
+        result = result[["fold_#"] + train_cols + test_cols]
+        avg_result = result.mean().to_dict()
+        avg_result["fold_#"] = "AVERAGE:"
+        result = result.append(avg_result, ignore_index=True).set_index("fold_#")
+        return result
 
     def show_target_dist(self):
         pass

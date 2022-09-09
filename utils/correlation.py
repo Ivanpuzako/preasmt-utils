@@ -29,7 +29,7 @@ def calc_correlation(
     return round(df[cols_corr].corr(method=method), 2)
 
 
-def cramers_V(var1: np.array, var2: np.array):
+def cramers_V(var1: np.array, var2: np.array) -> float:
     crosstab = np.array(
         pd.crosstab(var1, var2, rownames=None, colnames=None)
     )  # Cross table building
