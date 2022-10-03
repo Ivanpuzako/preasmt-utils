@@ -18,6 +18,8 @@ imbalanced-learn = "^0.9.1"
 pre-commit = "^2.20.0"
 black = "22.8.0"
 lightgbm = "^3.3.2"
+xlrd = "^2.0.1"
+shap = "^0.41.0"
 
 [tool.poetry.dev-dependencies]
 
