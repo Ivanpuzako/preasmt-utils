@@ -15,7 +15,7 @@ def calc_correlation(
     for col_name, row in correlation.iterrows():
         ## remove correlation with itself
         r = row.copy().drop(col_name)
-        max_corr = r.max()
+        max_corr = np.abs(r).max()
         if max_corr >= min_threshold:
             cols_corr[col_name] = max_corr
     if max_n > 0:
@@ -27,6 +27,15 @@ def calc_correlation(
         cols_corr = list(cols_corr.keys())
 
     return round(df[cols_corr].corr(method=method), 2)
+
+
+def get_most_correlated_to(
+    corr_df, target, min_abs_corr=0.1, max_features=100
+) -> pd.DataFrame:
+    target_corr = corr_df[target]
+    most_correlated = np.abs(target_corr).sort_values()[-max_features:]
+    cols = list(most_correlated[np.abs(most_correlated) >= min_abs_corr].index)
+    return corr_df.loc[cols, cols]
 
 
 def cramers_V(var1: np.array, var2: np.array) -> float:
@@ -43,8 +52,8 @@ def cramers_V(var1: np.array, var2: np.array) -> float:
     return stat / (obs * mini)
 
 
-def plot_corr_matrix(corr: pd.DataFrame, title: str = ""):
+def plot_corr_matrix(corr: pd.DataFrame, title: str = "", annot=True):
     mask = np.zeros_like(corr, dtype=np.bool)
     mask[np.triu_indices_from(mask)] = True
-    sns.heatmap(corr, cmap="cool", mask=mask, center=0, vmin=-1, vmax=1)
+    sns.heatmap(corr, cmap="cool", mask=mask, center=0, vmin=-1, vmax=1, annot=annot)
     plt.title(title)
