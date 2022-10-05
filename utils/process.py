@@ -46,6 +46,7 @@ class Features:
 class DataProcessor:
     def __init__(self, df: pd.DataFrame, target: str):
         self.target_name = target
+        self.initial_df = deepcopy(df)
         self.df, self.target = df.drop([target], axis=1), df[target]
         self.features = Features.from_dataframe(self.df)
 
@@ -103,13 +104,22 @@ class DataProcessor:
                 self.y_train.iloc[train_idx],
             )
             x_test, y_test = self.x_train.iloc[test_idx], self.y_train.iloc[test_idx]
-            estimator.fit(x_train, y_train)
-            pred_train = estimator.predict(x_train)
-            pred_test = estimator.predict(x_test)
+            estimator_cp = deepcopy(estimator)
+            estimator_cp.fit(x_train, y_train)
+            pred_train = estimator_cp.predict(x_train)
+            pred_test = estimator_cp.predict(x_test)
             fold_result = {"fold_#": fold_n}
             for metric_name, metric in metrics:
-                fold_result["train_" + metric_name] = metric(y_train, pred_train)
-                fold_result["test_" + metric_name] = metric(y_test, pred_test)
+                if "prob" in metric_name:
+                    pred_train_proba = estimator_cp.predict_proba(x_train)[:, -1]
+                    pred_test_proba = estimator_cp.predict_proba(x_test)[:, -1]
+                    fold_result["train_" + metric_name] = metric(
+                        y_train, pred_train_proba
+                    )
+                    fold_result["test_" + metric_name] = metric(y_test, pred_test_proba)
+                else:
+                    fold_result["train_" + metric_name] = metric(y_train, pred_train)
+                    fold_result["test_" + metric_name] = metric(y_test, pred_test)
             result = result.append(fold_result, ignore_index=True)
         train_cols = [c for c in result.columns if c.startswith("train")]
         test_cols = [c for c in result.columns if c.startswith("test")]
@@ -134,6 +144,7 @@ class DataProcessor:
         target_values = target if target is not None else self.target
         feature_importance = {}
         print(f"check feature importance by {criterion} criterion")
+        print("H0 - feature does not affect Target")
         for feature_name in features_to_analyze:
             stat, p = criterion(data[feature_name], target_values)
             is_important = p <= p_value
@@ -144,7 +155,7 @@ class DataProcessor:
                     pass
                 else:
                     print(
-                        f"feature {feature_name} probably is NOT important with p={round(p,2)}"
+                        f"feature {feature_name} probably is NOT important with p_value={round(p,2)}"
                     )
         return feature_importance
 
@@ -170,7 +181,7 @@ class ClfProcessor(DataProcessor):
 
     def cat_feature_importance(self, verbose=True):
         def criterion(f1, f2):
-            chi2, p, dof, expected = chi2_contingency.crosstab(f1, f2)
+            chi2, p, dof, expected = chi2_contingency(pd.crosstab(f1, f2))
             return chi2, p
 
         return self.features_target_analysys(
@@ -249,8 +260,10 @@ def plot_regression_importance(estimator, is_pipeline=True, feature_names=None):
         feature_names = estimator[last_step_name].get_feature_names_out()
         model = estimator[-1]
 
+    else:
+        model = estimator
     coefs = pd.DataFrame(
-        model.coef_,
+        model.coef_.reshape(-1, 1),
         columns=["Coefficients"],
         index=feature_names,
     )
@@ -262,3 +275,8 @@ def plot_regression_importance(estimator, is_pipeline=True, feature_names=None):
     plt.xlabel("Raw coefficient values")
     plt.subplots_adjust(left=0.3)
     return coefs
+
+
+def weighted_avg_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
+    err = np.abs(np.array(y_true) - np.array(y_pred)).sum()
+    return err / np.sum(y_true)
