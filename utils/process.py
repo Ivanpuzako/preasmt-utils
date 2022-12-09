@@ -6,41 +6,11 @@ from typing import List, Dict, Tuple, Callable, Any, Union
 from collections import defaultdict
 from sklearn.model_selection._split import BaseCrossValidator
 from copy import deepcopy
-from scipy.stats import mannwhitneyu, kruskal, chi2_contingency
+from utils.features import Features
+from scipy.stats import kruskal, chi2_contingency
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
-
-
-class Features:
-    def __init__(self, features: Dict[str, List[str]]):
-        self.features = defaultdict(list, **features)
-
-    def drop(self, to_drop: List[str]):
-        for to_drop_name in to_drop:
-            for category, features in self.features.items():
-                if to_drop_name in features:
-                    self.features[category].remove(to_drop_name)
-
-    def add(self, to_add: List[str], category: str):
-        self.drop(to_add)
-        self.features[category] += to_add
-
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame):
-        features = defaultdict(list)
-        for feature in df.columns:
-            if df[feature].dtype == "object":
-                features["categorical"].append(feature)
-            else:
-                features["numerical"].append(feature)
-        return cls(features)
-
-    def __repr__(self):
-        return str(self.features)
-
-    def __getitem__(self, key):
-        return self.features[key]
 
 
 class DataProcessor:
@@ -222,18 +192,6 @@ class ClfProcessor(DataProcessor):
         print("test target dist")
         print(self.y_test.value_counts())
 
-    def plot_num_features(self, features: List[str] = None, legends: List[str] = None):
-        if features is None:
-            features = self.features["numerical"]
-        fig, axes = plt.subplots(len(features) // 2 + len(features) % 2, 2)
-        fig.set_figheight(len(features) // 2 * 5)
-        fig.set_figwidth(17)
-        axes = axes.flatten()
-        for i, feature in enumerate(features):
-            ax = sns.boxplot(data=self.df, x=self.target, y=feature, ax=axes[i])
-            if legends is not None:
-                ax.set_title(legends[i])
-
 
 class RegProcessor(DataProcessor):
     def train_test_split(self, test_size=0.2):
@@ -244,39 +202,3 @@ class RegProcessor(DataProcessor):
             random_state=2022,
         )
         print(f"split with test size {test_size}")
-
-
-def evaluate(estimator, x_test, y_test, metrics, rnd=2):
-    y_pred = estimator.predict(x_test)
-    for metric_name, metric_fn in metrics:
-        metric_value = metric_fn(y_test, y_pred)
-        metric_value = round(metric_value, 2)
-        print(f"{metric_name}: {metric_value}")
-
-
-def plot_regression_importance(estimator, is_pipeline=True, feature_names=None):
-    if feature_names is None and is_pipeline:
-        last_step_name = estimator.steps[-2][0]
-        feature_names = estimator[last_step_name].get_feature_names_out()
-        model = estimator[-1]
-
-    else:
-        model = estimator
-    coefs = pd.DataFrame(
-        model.coef_.reshape(-1, 1),
-        columns=["Coefficients"],
-        index=feature_names,
-    )
-    coefs["abs_value"] = coefs["Coefficients"].map(np.abs)
-    coefs = coefs.sort_values("abs_value", ascending=False)
-    coefs.loc[:, ["Coefficients"]].plot.barh(figsize=(9, 7))
-    plt.title("Regression model importance")
-    plt.axvline(x=0, color=".5")
-    plt.xlabel("Raw coefficient values")
-    plt.subplots_adjust(left=0.3)
-    return coefs
-
-
-def weighted_avg_percentage_error(y_true: np.ndarray, y_pred: np.ndarray):
-    err = np.abs(np.array(y_true) - np.array(y_pred)).sum()
-    return err / np.sum(y_true)

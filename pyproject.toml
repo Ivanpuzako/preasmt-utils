@@ -20,7 +20,7 @@ black = "22.8.0"
 lightgbm = "^3.3.2"
 xlrd = "^2.0.1"
 shap = "^0.41.0"
-category-encoders = "^2.5.0"
+category-encoders = "^2.5.1"
 
 [tool.poetry.dev-dependencies]
 

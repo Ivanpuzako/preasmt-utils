@@ -8,7 +8,7 @@ import numpy as np
 
 
 def calc_correlation(
-    df, method: str, min_threshold=0.6, max_n: int = 0
+    df, method: str = "spearman", min_threshold=0.6, max_n: int = 0
 ) -> pd.DataFrame:
     correlation = df.corr(method=method)
     cols_corr = {}
@@ -50,10 +50,3 @@ def cramers_V(var1: np.array, var2: np.array) -> float:
         min(crosstab.shape) - 1
     )  # Take the minimum value between the columns and the rows of the cross table
     return stat / (obs * mini)
-
-
-def plot_corr_matrix(corr: pd.DataFrame, title: str = "", annot=True):
-    mask = np.zeros_like(corr, dtype=np.bool)
-    mask[np.triu_indices_from(mask)] = True
-    sns.heatmap(corr, cmap="cool", mask=mask, center=0, vmin=-1, vmax=1, annot=annot)
-    plt.title(title)
